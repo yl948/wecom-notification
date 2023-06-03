@@ -1,0 +1,66 @@
+{
+  "id": 1,
+  "name": "daily_news",
+  "title": "每天60秒读懂世界",
+  "author": "Alano",
+  "description": "获取每日新闻（可选【每日新闻】或【影视资讯】）和天气，封面跟随当天天气情况，实时变化。",
+  "version": "0.9",
+  "requirements": [],
+  "configField": [
+    {
+      "fieldName": "uid",
+      "fieldType": "Enum",
+      "label": "推送用户",
+      "helperText": "选择接收推送的用户,需在用户管理页独立设置推送配置",
+      "enumValuesRef": "UserList",
+      "multiValue": true
+    },
+    {
+      "fieldName": "channel",
+      "fieldType": "Enum",
+      "label": "选择消息推送通道",
+      "helperText": "微信通道必须是老应用或自建代理并添加可信IP（在MR应用设置中可添加多个微信推送通道）",
+      "enumValuesRef": "ChannelNameList",
+      "multiValue": false
+    },
+    {
+      "fieldName": "city",
+      "fieldType": "String",
+      "label": "设置城市，用于查询天气，例: 北京",
+      "helperText": "",
+      "defaultValue": "北京"
+    },
+    {
+      "fieldName": "key",
+      "fieldType": "String",
+      "label": "和风天气 API KEY",
+      "helperText": "在 https://dev.qweather.com 申请 KEY，创建项目后进入控制台新建项目然后添加 KEY",
+      "defaultValue": ""
+    },
+    {
+      "fieldName": "news_type",
+      "fieldType": "Enum",
+      "label": "选择每日新闻类型（可多选）",
+      "helperText": "",
+      "enumValues": [
+        {
+          "name": "热点新闻",
+          "value": "daily"
+        },
+        {
+          "name": "热点影视快讯",
+          "value": "entertainment"
+        }
+      ],
+      "defaultValue": "1",
+      "multiValue": true
+    }
+  ],
+  "logoUrl": "/plugins/daily_news/logo.jpg",
+  "githubUrl": "",
+  "helpDocUrl": "https://github.com/Alano-i/wecom-notification/tree/main/MR-Plugins/daily_news",
+  "payImageUrl": "https://p.xmoviebot.com/donate/alano_wechat.jpg",
+  "dependencies": {
+    "appVersion": ">=1.9.30"
+  }
+}

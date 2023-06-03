@@ -1,0 +1,43 @@
+{
+  "name": "tv_calendar_Alano",
+  "title": "追剧日历_Alano",
+  "author": "oreki & Alano",
+  "description": "根据已订阅剧集，查看未来7天更新计划。\n对于配置了MR访问地址的用户，点击微信推送内容可跳转到日历页面。\n点击左下角问号，进入日历。PS:媒体库需要是PLEX",
+  "version": "1.1",
+  "requirements": [],
+  "configField": [
+    {
+      "fieldName": "uid",
+      "fieldType": "Enum",
+      "label": "推送用户",
+      "helperText": "选择接收推送的用户,用户管理要独立设置推送配置才生效",
+      "enumValuesRef": "UserList",
+      "multiValue": true
+    },
+     {
+      "fieldName": "set_pic_url",
+      "fieldType": "String",
+      "label": "封面图 URL 地址",
+      "helperText": "自定义推送封面填写此项，不填写则随机二次元封面图，示例：http://img.com/a.png",
+      "defaultValue": "https://raw.githubusercontent.com/Alano-i/wecom-notification/main/MR-Plugins/tv_calendar/tv_calendar_Alano/logo.jpg"
+    },
+    {
+      "fieldName": "mbot_url",
+      "fieldType": "String",
+      "label": "Mbot URL，接收入库事件以同步本地媒体库数据到追剧日历，示例：http://10.10.10.3:1329",
+      "helperText": "",
+      "defaultValue": "http://10.10.10.3:1329"
+    },
+    {
+      "fieldName": "mbot_api_key",
+      "fieldType": "String",
+      "label": "Mbot API KEY，接收入库事件时身份验证",
+      "helperText": "",
+      "defaultValue": ""
+    }
+  ],
+  "logoUrl": "/plugins/tv_calendar_Alano/logo.jpg",
+  "githubUrl": null,
+  "helpDocUrl": "/static/tv_calendar/tv_calendar.html",
+  "dependencies": null
+}

@@ -1,0 +1,73 @@
+{
+  "name": "sites_message_wx",
+  "title": "PT站消息微信推送",
+  "author": "NaNaKo_ & Alano",
+  "description": "获取PT站内信和公告并通过微信通知,每天自动执行两次。基于NaNaKo_大佬的插件二次开发的微信通知专用版，感谢大佬。",
+  "version": "0.7",
+  "requirements": [],
+  "configField": [
+    {
+      "fieldName": "uid",
+      "fieldType": "Enum",
+      "label": "推送用户",
+      "helperText": "选择接收推送的用户,需在用户管理页独立设置推送配置",
+      "enumValuesRef": "UserList",
+      "multiValue": true
+    },
+    {
+      "fieldName": "wecom_proxy_url",
+      "fieldType": "String",
+      "label": "微信白名单代理设置，示例: https://abc.com",
+      "helperText": "",
+      "defaultValue": ""
+    },
+    {
+      "fieldName": "word_ignore",
+      "fieldType": "String",
+      "label": "屏蔽关键词，多个关键词用英文逗号分隔。",
+      "helperText": "默认值: 广告,已被删除,种子被删除,福利活动,大促,删除提醒,赞助商",
+      "defaultValue": "广告,已被删除,种子被删除,福利活动,大促,删除提醒,赞助商"
+    },
+    {
+      "fieldName": "qywx_channel_extra",
+      "fieldType": "Bool",
+      "label": "启用独立微信应用推送消息",
+      "helperText": "开启此项需完成下面4个设置项，上方第一个设置项选择的推送用户将会失效。反之关闭则下方设置项失效。参数获取参考：https://alanoo.notion.site/thumb_media_id-64f170f7dcd14202ac5abd6d0e5031fb",
+      "defaultValue": false
+    },
+    {
+      "fieldName": "corpid_extra",
+      "fieldType": "String",
+      "label": "企业 corpid，启用独立推送此设置生效",
+      "helperText": "",
+      "defaultValue": ""
+    },
+    {
+      "fieldName": "corpsecret_extra",
+      "fieldType": "String",
+      "label": "微信应用 corpsecret，启用独立推送此设置生效",
+      "helperText": "",
+      "defaultValue": ""
+    },
+    {
+      "fieldName": "agentid_extra",
+      "fieldType": "String",
+      "label": "微信应用 agentid，启用独立推送此设置生效",
+      "helperText": "",
+      "defaultValue": ""
+    },
+    {
+      "fieldName": "touser_extra",
+      "fieldType": "String",
+      "label": "微信消息推送接收人 touser，启用独立推送此设置生效，多个接收人: UserID1|UserID2",
+      "helperText": "",
+      "defaultValue": ""
+    }
+  ],
+  "logoUrl": "/plugins/sites_message_wx/logo.png",
+  "githubUrl": "",
+  "helpDocUrl": "https://github.com/Alano-i/wecom-notification/tree/main/MR-Plugins/sites_message_wx",
+  "dependencies": {
+    "appVersion": ">=1.9.16"
+  }
+}
