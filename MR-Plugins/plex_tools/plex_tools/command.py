@@ -3,7 +3,7 @@ from . import plex_sortout
 from mbot.openapi import mbot_api
 from mbot.core.params import ArgSchema, ArgType
 from .get_top250 import get_top250, get_lost_top250, get_lost_douban_top250, get_lost_imdb_top250
-from .import_to_mbot import push_sub_main
+from .sub_to_mbot import push_sub_main, movie_sub, tv_sub
 from .add_info import add_info_to_posters_main
 import logging
 
@@ -11,6 +11,9 @@ server = mbot_api
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 plugins_name = '「PLEX 工具箱」'
+
+def get_filter_list():
+    return [{'name':x.filter_name, 'value':x.filter_name} for x in server.subscribe.get_filters()]
 
 is_lock_list = [
     {
@@ -27,17 +30,7 @@ is_lock_list = [
     }
 ]
 
-collection_on_list = [
-    {
-        "name": "✅ 开启",
-        "value": 'on'
-    },
-    {
-        "name": "📴 关闭",
-        "value": 'off'
-    }
-]
-spare_flag_list = [
+state_list = [
     {
         "name": "✅ 开启",
         "value": 'on'
@@ -81,8 +74,8 @@ def select_data(ctx: PluginCommandContext,
                 threading_num: ArgSchema(ArgType.String, '多线程处理：填线程数量。默认为0，单线程处理', '示例：2000个媒体，设置40，则会启40个线程处理，每个线程处理50个。建议少于100个线程', default_value='0', required=False),
                 sortoutNum: ArgSchema(ArgType.String, '整理数量，10 或 10-50，留空整理全部', '说明：10：整理最新的10个，10-50：整理第10-50个（入库时间排序）', default_value='ALL', required=False),
                 is_lock: ArgSchema(ArgType.Enum, '选择需要执行的操作，留空执行设置中选中的全部操作', '', enum_values=lambda: is_lock_list, default_value='run_all', multi_value=False, required=False),
-                collection_on_config: ArgSchema(ArgType.Enum, '临时启用合集整理，默认关闭', '', enum_values=lambda: collection_on_list, default_value='off', multi_value=False, required=False),
-                spare_flag: ArgSchema(ArgType.Enum, '启用备用整理方案，默认启用', '', enum_values=lambda: spare_flag_list, default_value='on', multi_value=False, required=False)):
+                collection_on_config: ArgSchema(ArgType.Enum, '临时启用合集整理：📴 关闭', '', enum_values=lambda: state_list, default_value='off', multi_value=False, required=False),
+                spare_flag: ArgSchema(ArgType.Enum, '备用整理方案：✅ 开启', '', enum_values=lambda: state_list, default_value='on', multi_value=False, required=False)):
     # logger.info(f'library:{library[0]}')
     spare_flag = bool(spare_flag and spare_flag.lower() != 'off')
     collection_on_config = bool(
@@ -115,9 +108,9 @@ def import_plex(ctx: PluginCommandContext,
 @plugin.command(name='add_info', title='海报添加信息', desc='将媒体主要信息添加到海报', icon='AddPhotoAlternate', run_in_background=True)
 def add_info(ctx: PluginCommandContext,
              library: ArgSchema(ArgType.Enum, '选择需要处理的的媒体库', '', enum_values=get_enum_data, multi_value=True),
-             restore_config: ArgSchema(ArgType.Enum, '恢复模式，默认关闭', '开启后恢复所有处理前的原始海报且下方设置失效', enum_values=lambda: collection_on_list, default_value='off', multi_value=False, required=False),
-             force_add_config: ArgSchema(ArgType.Enum, '强制添加模式，默认关闭', '开启：所有海报重新处理。关闭：处理过的海报不再处理', enum_values=lambda: spare_flag_list, default_value='off', multi_value=False, required=False),
-             only_show_config: ArgSchema(ArgType.Enum, '对于剧集只处理剧集封面，默认关闭', '', enum_values=lambda: spare_flag_list, default_value='off', multi_value=False, required=False)):
+             restore_config: ArgSchema(ArgType.Enum, '恢复模式：📴 关闭', '开启后恢复所有处理前的原始海报且下方设置失效', enum_values=lambda: state_list, default_value='off', multi_value=False, required=False),
+             force_add_config: ArgSchema(ArgType.Enum, '强制添加模式：📴 关闭', '开启：所有海报重新处理。关闭：处理过的海报不再处理', enum_values=lambda: state_list, default_value='off', multi_value=False, required=False),
+             only_show_config: ArgSchema(ArgType.Enum, '对于剧集只处理剧集封面：📴 关闭', '', enum_values=lambda: state_list, default_value='off', multi_value=False, required=False)):
     force_add = bool(force_add_config and force_add_config.lower() != 'off')
     restore = bool(restore_config and restore_config.lower() != 'off')
     only_show = bool(only_show_config and only_show_config.lower() != 'off')
@@ -143,24 +136,28 @@ def get_top250_echo(ctx: PluginCommandContext):
     return PluginCommandResponse(True, f'手动获取最新 TOP250 列表完成')
 
 
-@plugin.command(name='get_lost_top250', title='TOP250缺了哪些', desc='查询媒体库中缺失的 TOP250 列表', icon='MilitaryTech', run_in_background=True)
+@plugin.command(name='get_lost_top250', title='TOP250缺了哪些', desc='查询媒体库中缺失的 TOP250 列表并订阅缺失的影片', icon='MilitaryTech', run_in_background=True)
 def get_lost_douban_top250_echo(ctx: PluginCommandContext,
-                                lost_top250_config: ArgSchema(ArgType.Enum, '选择查询缺失类型，默认查询缺失的豆瓣TOP250', '', enum_values=lambda: lost_top250_list, default_value=1, multi_value=False, required=False)):
+                                lost_top250_config: ArgSchema(ArgType.Enum, '选择查询缺失类型：🟢 豆瓣 TOP250', '', enum_values=lambda: lost_top250_list, default_value=1, multi_value=False, required=False),
+                                sub_config: ArgSchema(ArgType.Enum, '订阅 TOP250 缺失的影片：📴 关闭', '', enum_values=lambda: state_list, default_value='off', multi_value=False, required=False),
+                                filter_name: ArgSchema(ArgType.Enum, '选择订阅时使用的过滤器，默认：自动选择', '', enum_values=get_filter_list, default_value='', multi_value=False, required=False)):
+    sub_set = bool(sub_config and sub_config.lower() != 'off')
     logger.info(f'{plugins_name}开始获取缺失的TOP250列表')
     if lost_top250_config == 1:
-        get_lost_douban_top250()
+        get_lost_douban_top250(sub_set,filter_name)
     elif lost_top250_config == 2:
-        get_lost_imdb_top250()
+        get_lost_imdb_top250(sub_set,filter_name)
     else:
-        get_lost_top250()
-    logger.info(f'{plugins_name}缺失的 TOP250 列表获取完成')
-    return PluginCommandResponse(True, f'缺失的 TOP250 列表获取完成')
+        get_lost_top250(sub_set,filter_name)
+    result_text = f'缺失的 TOP250 列表获取完成并订阅' if sub_set else f'缺失的 TOP250 列表获取完成'
+    logger.info(f'{plugins_name}{result_text}')
+    return PluginCommandResponse(True, result_text)
 
 
 @plugin.command(name='single_video', title='整理 PLEX 媒体', desc='整理指定电影名称的媒体', icon='LocalMovies', run_in_background=True)
 def single_video(ctx: PluginCommandContext,
                  single_videos: ArgSchema(ArgType.String, '整理指定电影名称的媒体,支持回车换行，一行一条', '', default_value='', required=True),
-                 spare_flag: ArgSchema(ArgType.Enum, '启用备用整理方案，默认启用', '', enum_values=lambda: spare_flag_list, default_value='on', multi_value=False, required=False)):
+                 spare_flag: ArgSchema(ArgType.Enum, '备用整理方案：✅ 开启', '', enum_values=lambda: state_list, default_value='on', multi_value=False, required=False)):
     spare_flag = bool(spare_flag and spare_flag.lower() != 'off')
     logger.info(f'{plugins_name}开始手动整理指定媒体')
     plex_sortout.process_single_video(single_videos, spare_flag)

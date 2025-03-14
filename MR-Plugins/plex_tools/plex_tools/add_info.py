@@ -54,6 +54,10 @@ def save_img(media,img_url,title,img_path,img_dir):
         try:
             http = urllib3.PoolManager()
             response = http.request('GET', img_url)
+            if response.status == 404:
+                logger.error(f'「{title}」保存 {img_url} 到本地失败，跳过处理。可能这个媒体没有刮削出封面，你需要手动设置一下封面！')
+                break
+
             with open(f"{img_dir}/tmp.jpg", "wb") as f:
                 f.write(response.data)
 
@@ -122,7 +126,7 @@ def get_display_title(key):
                 return display_title
     return ''
 
-def adjust_brightness(rgba_image, threshold=110):
+def adjust_brightness(rgba_image, threshold=88):
 
     # 转换为RGB模式
     rgb_image = rgba_image.convert("RGB")
@@ -199,7 +203,7 @@ def new_poster(media_type,resolution,rdynamic_range,duration,rating,poster_path,
         if resolution == '1080P' and media_type_org not in ['show_p','season_p'] and '小时' in duration and '分钟' in duration:
             scale = 1192/1000
             duration = duration.replace(' ','')
-        if rdynamic_range =='DV' and media_type_org not in ['show_p','season_p'] and '小时' in duration and '分钟' in duration:
+        if (rdynamic_range =='DV' or rdynamic_range =='HDR+DV') and media_type_org not in ['show_p','season_p'] and '小时' in duration and '分钟' in duration:
             scale = 1180/1000
             duration = duration.replace(' ','')
         if media_type_org in ['show_p','season_p']:
@@ -244,7 +248,8 @@ def new_poster(media_type,resolution,rdynamic_range,duration,rating,poster_path,
         overlay_alpha = 140
         if brightness < 60:
             overlay_alpha = 135
-    node = 35
+    # node = 35
+    node = 80
     out_line_node = 80
     max_a = 30
     min_a = 0
@@ -264,18 +269,29 @@ def new_poster(media_type,resolution,rdynamic_range,duration,rating,poster_path,
     else:
         outline_a = 0
         # 白色背景
+        overlay_a_black = 0
         if media_type == 'movie':
-            overlay_a = 46
+            overlay_a = 50
             if brightness < 19:
-                overlay_a = 58
+                overlay_a = 62
+            if brightness > 30:
+                overlay_a_black = 40
+            if brightness > 35:
+                overlay_a_black = 50
         if media_type == 'show':
-            overlay_a = 35
+            overlay_a = 36
             if brightness < 19:
-                overlay_a = 40
+                overlay_a = 42
+            if brightness > 35:
+                overlay_a_black = 30
+        
         overlay_layer = Image.new("RGBA", (poster_width, poster_height), (255, 255, 255, overlay_a))
         # 使用叠加模式混合两个图像
         # poster_image = Image.blend(blurred_image, overlay_layer,0.19)
         poster_image = Image.alpha_composite(blurred_image, overlay_layer)
+        overlay_layer_black = Image.new("RGBA", (poster_width, poster_height), (0, 0, 0, overlay_a_black))
+        poster_image = Image.alpha_composite(poster_image, overlay_layer_black)
+        # poster_image.paste(overlay_layer_black, (0, 0))
         contrast_factor = 1.3  # 色阶增强因子，大于1增强，小于1减弱
     
     try:
@@ -348,7 +364,7 @@ def new_poster(media_type,resolution,rdynamic_range,duration,rating,poster_path,
     font_path = f'{base_path}/font/fzlth.ttf'
     font_path_n = f'{base_path}/font/ALIBABA_Bold.otf'
     draw = ImageDraw.Draw(poster)
-    if rdynamic_range =='DV' and media_type == 'movie':
+    if (rdynamic_range =='DV' or rdynamic_range =='HDR+DV') and media_type == 'movie':
         font_r = ImageFont.truetype(f"{font_path}", int(51 * scale))
     else:
         font_r = ImageFont.truetype(f"{font_path}", int(54 * scale))
@@ -369,7 +385,7 @@ def new_poster(media_type,resolution,rdynamic_range,duration,rating,poster_path,
     y_n = int(y+bar_height/2 - text_height0/2)
     if media_type == 'movie':
         draw.text((x_duration, y_duration-3 * scale), duration, fill=(255,255,255,255),font=font_r)
-        if rdynamic_range =='DV':
+        if rdynamic_range =='DV' or rdynamic_range =='HDR+DV':
             draw.text((right-26 * scale-text_width0, y_n-23 * scale), rating, fill=(255,155,21,255),font=font_n)
         else:
             draw.text((right-30 * scale-text_width0, y_n-23 * scale), rating, fill=(255,155,21,255),font=font_n)
@@ -394,7 +410,7 @@ def new_poster(media_type,resolution,rdynamic_range,duration,rating,poster_path,
     #     overlay_flag = True
     return out_path
 
-def get_local_info(media):
+def get_local_info(media,media_title=''):
     # 文件名
     try:
         file_name = os.path.basename(media.locations[0])
@@ -423,17 +439,25 @@ def get_local_info(media):
         videoResolution = videoResolution.upper()
     except Exception as e:
         videoResolution = ''
+
+    # 如果没有获取到分辨率
+    if not videoResolution:
+        logger.error(f"{plugins_name} 没有获取到 ['{media_title}'] 的分辨率，请检查 PLEX 对该影片是否已分析完成。")
     # 动态范围
     try:
         key = media.key # /library/metadata/33653
         display_title = get_display_title(key).lower()
         # display_title = media.media[0].parts[0].streams[0].displayTitle.lower(), #'4K DoVi (HEVC Main 10) 4K HDR10 (HEVC Main 10) 1080p (H.264)
-        if 'dovi' in display_title or 'dov' in display_title or 'dv' in display_title:
+
+        if ('dovi' in display_title or 'dov' in display_title or 'dv' in display_title) and 'hdr' in display_title:
+            display_title = 'HDR+DV'
+        elif 'dovi' in display_title or 'dov' in display_title or 'dv' in display_title:
             display_title = 'DV'
         elif 'hdr' in display_title:
             display_title = 'HDR'
         else:
             display_title = 'SDR'
+
     except Exception as e:
         display_title = ''
     return file_name,duration,size,bitrate,videoResolution,display_title
@@ -465,6 +489,7 @@ def get_episode(media,media_type,lib_name,force_add,restore,show_log):
 def add_info_one(media,media_type,media_n,lib_name,force_add,i,rating,show_year,restore,show_log):
     media_title = ''
     media_s = media
+    poster_url = ''
     for v in range(3):
         try:
             if media_type == 'movie':
@@ -523,7 +548,7 @@ def add_info_one(media,media_type,media_n,lib_name,force_add,i,rating,show_year,
                         medias.sort(key=lambda media: media.addedAt, reverse=True)  # 最新的排在最前面
                         media = medias[0]
 
-                    file_name,duration,size,bitrate,videoResolution,display_title = get_local_info(media)
+                    file_name,duration,size,bitrate,videoResolution,display_title = get_local_info(media,media_title)
                     if poster_path:
                         out_path = new_poster(media_type,videoResolution,display_title,duration,rating,poster_path,media_title)
 
@@ -536,8 +561,9 @@ def add_info_one(media,media_type,media_n,lib_name,force_add,i,rating,show_year,
             break
         except Exception as e:
             media = media_s
-            media_title = media_title or '未知' 
+            media_title = media_title or '未知'
             logger.error(f"{plugins_name}第 {v+1}/3 次处理 ['{media_title}'] 时失败，原因：{e}")
+            time.sleep(3)
 
 def add_info_to_posters(library,lib_name,force_add,restore,show_log,only_show):
     lib_type = library.type
@@ -562,6 +588,7 @@ def add_info_to_posters(library,lib_name,force_add,restore,show_log,only_show):
                     for episode in show.episodes():
                         add_info_one(episode,'episode','',lib_name,force_add,i,rating,show_year,restore,show_log)
                         i=i+1
+                # return
             logger.info(f"{plugins_name}媒体库 ['{lib_name}'] 中的剧集海报添加媒体信息完成")
         else:
             logger.info(f"{plugins_name}媒体库 ['{lib_name}'] 中没有剧集，不需要处理")
@@ -571,7 +598,7 @@ def add_info_to_posters(library,lib_name,force_add,restore,show_log,only_show):
             movies_n = len(movies)
             i=1
             for movie in movies:
-                # if i>1:
+                # if i>4:
                 #     return
                 add_info_one(movie,'movie',movies_n,lib_name,force_add,i,'','',restore,show_log)
                 i=i+1
@@ -590,8 +617,3 @@ def add_info_to_posters_main(lib_name,force_add,restore,show_log,only_show):
         add_info_to_posters(library,lib_name,force_add,restore,show_log,only_show)
     except Exception as e:
         logger.error(f"{plugins_name}海报添加信息出现错误! 原因：{e}")
-
-        # logger.warning(f"videoResolution:{videoResolution}")
-        # logger.warning(f"display_title:{display_title}")
-        # logger.warning(f"duration:{duration}")
-        # logger.warning(f"rating:{rating}")
